@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
     ReactFlow,
     Background,
@@ -12,6 +12,7 @@ import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import type { NFA } from '../lib/automata/nfa';
 import type { DFA } from '../lib/automata/dfa';
+import { StateNode } from './StateNode';
 
 interface VisualizationPanelProps {
     nfa: NFA | null;
@@ -20,14 +21,15 @@ interface VisualizationPanelProps {
     activeStates: string[]; // IDs of currently active states
 }
 
-const nodeWidth = 50;
-const nodeHeight = 50;
+const nodeWidth = 60;
+const nodeHeight = 60;
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-    dagreGraph.setGraph({ rankdir: 'LR', ranksep: 80, nodesep: 40 }); // Increased spacing
+    // Increased spacing for better readability
+    dagreGraph.setGraph({ rankdir: 'LR', ranksep: 120, nodesep: 60 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -55,6 +57,8 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+    const nodeTypes = useMemo(() => ({ state: StateNode }), []);
+
     useEffect(() => {
         let newNodes: Node[] = [];
         let newEdges: Edge[] = [];
@@ -65,41 +69,30 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 id: 'start-indicator',
                 data: { label: 'Start' },
                 position: { x: 0, y: 0 },
-                type: 'input', // Special type if needed, but default works
+                type: 'input',
                 style: {
                     background: 'transparent',
-                    color: '#94a3b8', // slate-400
+                    color: '#e2e8f0',
                     border: 'none',
-                    width: 50,
+                    width: 60,
                     height: 50,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    fontSize: '14px',
+                    fontSize: '16px',
                     fontWeight: 'bold',
+                    textTransform: 'lowercase',
                 },
             });
 
             newNodes = [...newNodes, ...nfa.states.map((s) => ({
                 id: s.id,
-                data: { label: s.label || s.id.replace('s', '') },
-                position: { x: 0, y: 0 },
-                style: {
-                    background: '#1e293b', // navy-800
-                    color: '#fff',
-                    border: s.isAccepting ? '2px double #2dd4bf' : '1px solid #64748b', // accent-400 or slate-500
-                    borderWidth: s.isAccepting ? '4px' : '2px',
-                    borderColor: s.isAccepting ? '#2dd4bf' : '#64748b',
-                    borderRadius: '50%',
-                    width: 50,
-                    height: 50,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    boxShadow: s.isAccepting ? '0 0 10px rgba(45, 212, 191, 0.3)' : 'none',
+                type: 'state', // Use custom node
+                data: {
+                    label: s.label || s.id.replace('s', ''),
+                    isAccepting: s.isAccepting
                 },
+                position: { x: 0, y: 0 },
             }))];
 
             // Edge from indicator to start state
@@ -107,23 +100,56 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 id: 'start-edge',
                 source: 'start-indicator',
                 target: nfa.start.id,
+                targetHandle: 'left',
                 label: '',
-                markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
-                style: { stroke: '#94a3b8', strokeWidth: 2 },
+                markerEnd: { type: MarkerType.ArrowClosed, color: '#ffffff' },
+                style: { stroke: '#ffffff', strokeWidth: 2 },
                 type: 'straight',
             });
 
             nfa.states.forEach((s) => {
                 s.transitions.forEach((t, idx) => {
+                    const sourceIdNum = parseInt(s.id.replace('s', ''));
+                    const targetIdNum = parseInt(t.to.id.replace('s', ''));
+                    const diff = targetIdNum - sourceIdNum;
+
+                    let sourceHandle = 'right';
+                    let targetHandle = 'left';
+                    let edgeType = 'default'; // Bezier
+
+                    if (sourceIdNum === targetIdNum) {
+                        // Self loop
+                        sourceHandle = 'top-source';
+                        targetHandle = 'top-target';
+                        edgeType = 'bezier';
+                    } else if (diff > 1) {
+                        // Forward Skip (Arc Over)
+                        sourceHandle = 'top-source';
+                        targetHandle = 'top-target';
+                        edgeType = 'bezier';
+                    } else if (diff < 0) {
+                        // Backward Loop (Arc Under)
+                        sourceHandle = 'bottom-source';
+                        targetHandle = 'bottom-target';
+                        edgeType = 'bezier';
+                    } else {
+                        // Direct neighbor (diff === 1)
+                        sourceHandle = 'right';
+                        targetHandle = 'left';
+                        edgeType = 'bezier';
+                    }
+
                     newEdges.push({
                         id: `${s.id}-${t.to.id}-${idx}`,
                         source: s.id,
                         target: t.to.id,
+                        sourceHandle,
+                        targetHandle,
                         label: t.symbol === null ? 'ε' : t.symbol,
-                        markerEnd: { type: MarkerType.ArrowClosed, color: '#cbd5e1' },
-                        style: { stroke: '#cbd5e1', strokeWidth: 1.5 },
-                        labelStyle: { fill: '#f1f5f9', fontWeight: 700, fontSize: 12 }, // slate-100
-                        type: 'smoothstep',
+                        markerEnd: { type: MarkerType.ArrowClosed, color: '#ffffff' },
+                        style: { stroke: '#ffffff', strokeWidth: 2 },
+                        labelStyle: { fill: '#ffffff', fontWeight: 800, fontSize: 16, stroke: '#0f172a', strokeWidth: 4, paintOrder: 'stroke' },
+                        type: edgeType,
                     });
                 });
             });
@@ -135,37 +161,27 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 position: { x: 0, y: 0 },
                 style: {
                     background: 'transparent',
-                    color: '#94a3b8',
+                    color: '#e2e8f0',
                     border: 'none',
-                    width: 50,
+                    width: 60,
                     height: 50,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    fontSize: '14px',
+                    fontSize: '16px',
                     fontWeight: 'bold',
+                    textTransform: 'lowercase',
                 },
             });
 
             newNodes = [...newNodes, ...dfa.states.map((s) => ({
                 id: s.id,
-                data: { label: s.label || s.id },
-                position: { x: 0, y: 0 },
-                style: {
-                    background: '#1e293b',
-                    color: '#fff',
-                    border: s.isAccepting ? '4px double #2dd4bf' : '2px solid #64748b',
-                    borderColor: s.isAccepting ? '#2dd4bf' : '#64748b',
-                    borderRadius: '50%',
-                    width: 60,
-                    height: 60,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    boxShadow: s.isAccepting ? '0 0 10px rgba(45, 212, 191, 0.3)' : 'none',
+                type: 'state',
+                data: {
+                    label: s.label || s.id,
+                    isAccepting: s.isAccepting
                 },
+                position: { x: 0, y: 0 },
             }))];
 
             // Edge from indicator to start state
@@ -173,39 +189,59 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 id: 'start-edge',
                 source: 'start-indicator',
                 target: dfa.start.id,
+                targetHandle: 'left',
                 label: '',
-                markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
-                style: { stroke: '#94a3b8', strokeWidth: 2 },
+                markerEnd: { type: MarkerType.ArrowClosed, color: '#ffffff' },
+                style: { stroke: '#ffffff', strokeWidth: 2 },
                 type: 'straight',
             });
 
             dfa.states.forEach((s) => {
                 Object.entries(s.transitions).forEach(([symbol, target]) => {
+                    const sourceIdNum = parseInt(s.id.replace('d', ''));
+                    const targetIdNum = parseInt(target.id.replace('d', ''));
+                    // DFA IDs might not be purely numeric sequential in the same way, but let's try
+                    // If not numeric, fallback to basic logic
+                    const diff = isNaN(sourceIdNum) || isNaN(targetIdNum) ? 1 : targetIdNum - sourceIdNum;
+
+                    let sourceHandle = 'right';
+                    let targetHandle = 'left';
+
+                    if (s.id === target.id) {
+                        sourceHandle = 'top-source';
+                        targetHandle = 'top-target';
+                    } else if (diff > 1) {
+                        sourceHandle = 'top-source';
+                        targetHandle = 'top-target';
+                    } else if (diff < 0) {
+                        sourceHandle = 'bottom-source';
+                        targetHandle = 'bottom-target';
+                    }
+
                     newEdges.push({
                         id: `${s.id}-${target.id}-${symbol}`,
                         source: s.id,
                         target: target.id,
+                        sourceHandle,
+                        targetHandle,
                         label: symbol,
-                        markerEnd: { type: MarkerType.ArrowClosed, color: '#cbd5e1' },
-                        style: { stroke: '#cbd5e1', strokeWidth: 1.5 },
-                        labelStyle: { fill: '#f1f5f9', fontWeight: 700, fontSize: 12 },
-                        type: 'smoothstep',
+                        markerEnd: { type: MarkerType.ArrowClosed, color: '#ffffff' },
+                        style: { stroke: '#ffffff', strokeWidth: 2 },
+                        labelStyle: { fill: '#ffffff', fontWeight: 800, fontSize: 16, stroke: '#0f172a', strokeWidth: 4, paintOrder: 'stroke' },
+                        type: 'default',
                     });
                 });
             });
         }
 
-        // Highlight active states
+        // Highlight active states (handled inside StateNode via 'selected' prop if we pass it, or we can update data)
+        // Actually, React Flow passes 'selected' if we select it. But we want programmatic highlighting.
+        // We should update the 'data' of the nodes to include 'isActive'.
         newNodes = newNodes.map(node => {
             if (node.id === 'start-indicator') return node;
             return {
                 ...node,
-                style: {
-                    ...node.style,
-                    background: activeStates.includes(node.id) ? '#14b8a6' : (node.style?.background || '#1e293b'), // accent-500
-                    borderColor: activeStates.includes(node.id) ? '#2dd4bf' : (node.style?.borderColor || '#64748b'),
-                    boxShadow: activeStates.includes(node.id) ? '0 0 15px rgba(20, 184, 166, 0.6)' : (node.style?.boxShadow || 'none'),
-                }
+                selected: activeStates.includes(node.id), // Use selected prop for highlighting
             };
         });
 
@@ -215,10 +251,11 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
     }, [nfa, dfa, mode, activeStates, setNodes, setEdges]);
 
     return (
-        <div className="flex-1 bg-navy-950 h-full"> {/* Darker background for contrast */}
+        <div className="flex-1 bg-navy-950 h-full">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
+                nodeTypes={nodeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 fitView
