@@ -65,7 +65,7 @@ export function Layout({ children, activePage, onNavigate }: LayoutProps) {
                         icon={<Github size={20} />}
                         label="Source Code"
                         isOpen={isSidebarOpen}
-                        onClick={() => window.open('https://github.com/ilyarjan1/web-final', '_blank')}
+                        onClick={() => window.open('https://github.com/ilyarjan1/Regex-to-NFA-DFA', '_blank')}
                     />
                 </nav>
 

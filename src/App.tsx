@@ -4,6 +4,8 @@ import { Layout } from './components/Layout';
 import { InputPanel } from './components/InputPanel';
 import { VisualizationPanel } from './components/VisualizationPanel';
 import { Documentation } from './components/Documentation';
+import { TransitionTable } from './components/TransitionTable';
+import { Explanations } from './components/Explanations';
 
 import { RegexParser } from './lib/automata/regexParser';
 import { thompson, resetStateCounter } from './lib/automata/nfa';
@@ -59,92 +61,105 @@ function App() {
         <Documentation />
       ) : activePage === 'home' ? (
         <div className="flex flex-col items-center justify-center h-full text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Welcome to Automata</h1>
-          <p className="text-gray-400 max-w-lg mb-8">
-            An interactive tool to visualize and understand the conversion of Regular Expressions to NFA and DFA.
+          <h1 className="text-5xl font-bold text-white mb-6 tracking-tight">
+            Master <span className="text-accent-400">Automata Theory</span>
+          </h1>
+          <p className="text-gray-400 max-w-2xl mb-10 text-lg leading-relaxed">
+            Visualize the magic of converting Regular Expressions into Nondeterministic and Deterministic Finite Automata. Interactive, educational, and easy to understand.
           </p>
           <button
             onClick={() => setActivePage('converter')}
-            className="bg-accent-600 hover:bg-accent-500 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+            className="bg-accent-600 hover:bg-accent-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-accent-900/20 hover:scale-105"
           >
-            Start Converting
+            Start Learning
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-          {/* Left Column: Input */}
-          <div className="lg:col-span-4 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto pr-2">
+          {/* Left Column: Input & Explanations */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
             <InputPanel
               regex={regex}
               setRegex={setRegex}
               onParse={handleParse}
               error={error}
             />
+
+            {nfa && <Explanations mode={mode} />}
           </div>
 
-          {/* Right Column: Visualization */}
-          <div className="lg:col-span-8 h-full bg-navy-800 rounded-lg border border-navy-700 p-6 flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold text-white">Result</h2>
+          {/* Right Column: Visualization & Table */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="bg-navy-800 rounded-lg border border-navy-700 p-6 flex flex-col shadow-xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <span className="w-2 h-8 bg-accent-500 rounded-full"></span>
+                  Visualization Result
+                </h2>
+
+                {nfa && (
+                  <div className="flex gap-2 bg-navy-900 p-1 rounded-lg border border-navy-700">
+                    <button
+                      onClick={() => setMode('NFA')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${mode === 'NFA'
+                          ? 'bg-accent-600 text-white shadow-lg shadow-accent-900/50'
+                          : 'text-gray-400 hover:text-white hover:bg-navy-800'
+                        }`}
+                    >
+                      NFA
+                    </button>
+                    <button
+                      onClick={() => setMode('DFA')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${mode === 'DFA'
+                          ? 'bg-secondary-500 text-white shadow-lg shadow-secondary-900/50'
+                          : 'text-gray-400 hover:text-white hover:bg-navy-800'
+                        }`}
+                    >
+                      DFA
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 relative bg-navy-950 rounded-lg border border-navy-700 overflow-hidden min-h-[400px]">
+                <VisualizationPanel
+                  nfa={nfa}
+                  dfa={dfa}
+                  mode={mode}
+                  activeStates={[]}
+                />
+              </div>
 
               {nfa && (
-                <div className="flex gap-2 bg-navy-900 p-1 rounded-lg border border-navy-700">
+                <div className="mt-6 flex items-center gap-4 bg-navy-900/50 p-4 rounded-lg border border-navy-700">
+                  <input
+                    type="text"
+                    placeholder="Test string (e.g., abba)..."
+                    className="bg-navy-950 border border-navy-700 rounded-md px-4 py-2 text-white text-sm outline-none focus:border-accent-500 flex-1"
+                    value={testInput}
+                    onChange={(e) => {
+                      setTestInput(e.target.value);
+                      setTestResult(null);
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleTestString()}
+                  />
                   <button
-                    onClick={() => setMode('NFA')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${mode === 'NFA'
-                        ? 'bg-accent-600 text-white shadow-sm'
-                        : 'text-gray-400 hover:text-white'
-                      }`}
+                    onClick={handleTestString}
+                    className="bg-navy-800 hover:bg-navy-700 text-accent-400 border border-navy-600 px-4 py-2 rounded-md text-sm font-bold transition-colors"
                   >
-                    NFA
+                    Test String
                   </button>
-                  <button
-                    onClick={() => setMode('DFA')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${mode === 'DFA'
-                        ? 'bg-accent-600 text-white shadow-sm'
-                        : 'text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    DFA
-                  </button>
+                  {testResult !== null && (
+                    <span className={`px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider ${testResult ? 'bg-green-900/30 text-green-400 border border-green-800' : 'bg-red-900/30 text-red-400 border border-red-800'}`}>
+                      {testResult ? 'Accepted' : 'Rejected'}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="flex-1 relative bg-navy-900 rounded-lg border border-navy-700 overflow-hidden min-h-[400px]">
-              <VisualizationPanel
-                nfa={nfa}
-                dfa={dfa}
-                mode={mode}
-                activeStates={[]}
-              />
-            </div>
-
             {nfa && (
-              <div className="mt-4 flex items-center gap-4">
-                <input
-                  type="text"
-                  placeholder="Test string..."
-                  className="bg-navy-900 border border-navy-700 rounded-md px-4 py-2 text-white text-sm outline-none focus:border-accent-500"
-                  value={testInput}
-                  onChange={(e) => {
-                    setTestInput(e.target.value);
-                    setTestResult(null);
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleTestString()}
-                />
-                <button
-                  onClick={handleTestString}
-                  className="text-accent-500 hover:text-accent-400 text-sm font-medium"
-                >
-                  Test String
-                </button>
-                {testResult !== null && (
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${testResult ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-red-900/50 text-red-400 border border-red-800'}`}>
-                    {testResult ? 'ACCEPTED' : 'REJECTED'}
-                  </span>
-                )}
-              </div>
+              <TransitionTable nfa={nfa} dfa={dfa} mode={mode} />
             )}
           </div>
         </div>
