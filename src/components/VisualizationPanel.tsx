@@ -13,6 +13,7 @@ import dagre from 'dagre';
 import type { NFA } from '../lib/automata/nfa';
 import type { DFA } from '../lib/automata/dfa';
 import { StateNode } from './StateNode';
+import { CustomEdge } from './CustomEdge';
 
 interface VisualizationPanelProps {
     nfa: NFA | null;
@@ -28,8 +29,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-    // Increased spacing for better readability
-    dagreGraph.setGraph({ rankdir: 'LR', ranksep: 120, nodesep: 60 });
+    // Compact spacing: ranksep reduces horizontal distance, nodesep reduces vertical
+    dagreGraph.setGraph({ rankdir: 'LR', ranksep: 60, nodesep: 30 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -58,6 +59,7 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
     const nodeTypes = useMemo(() => ({ state: StateNode }), []);
+    const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
     useEffect(() => {
         let newNodes: Node[] = [];
@@ -87,7 +89,7 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
 
             newNodes = [...newNodes, ...nfa.states.map((s) => ({
                 id: s.id,
-                type: 'state', // Use custom node
+                type: 'state',
                 data: {
                     label: s.label || s.id.replace('s', ''),
                     isAccepting: s.isAccepting
@@ -115,28 +117,26 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
 
                     let sourceHandle = 'right';
                     let targetHandle = 'left';
-                    let edgeType = 'default'; // Bezier
+                    let edgeType = 'custom';
 
                     if (sourceIdNum === targetIdNum) {
-                        // Self loop
+                        // Self loop - use top handles for visibility
                         sourceHandle = 'top-source';
                         targetHandle = 'top-target';
-                        edgeType = 'bezier';
                     } else if (diff > 1) {
                         // Forward Skip (Arc Over)
                         sourceHandle = 'top-source';
                         targetHandle = 'top-target';
-                        edgeType = 'bezier';
                     } else if (diff < 0) {
                         // Backward Loop (Arc Under)
                         sourceHandle = 'bottom-source';
                         targetHandle = 'bottom-target';
-                        edgeType = 'bezier';
                     } else {
                         // Direct neighbor (diff === 1)
                         sourceHandle = 'right';
                         targetHandle = 'left';
-                        edgeType = 'bezier';
+                        // Use default bezier for short connections to avoid "hump"
+                        edgeType = 'default';
                     }
 
                     newEdges.push({
@@ -200,12 +200,11 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 Object.entries(s.transitions).forEach(([symbol, target]) => {
                     const sourceIdNum = parseInt(s.id.replace('d', ''));
                     const targetIdNum = parseInt(target.id.replace('d', ''));
-                    // DFA IDs might not be purely numeric sequential in the same way, but let's try
-                    // If not numeric, fallback to basic logic
                     const diff = isNaN(sourceIdNum) || isNaN(targetIdNum) ? 1 : targetIdNum - sourceIdNum;
 
                     let sourceHandle = 'right';
                     let targetHandle = 'left';
+                    let edgeType = 'custom';
 
                     if (s.id === target.id) {
                         sourceHandle = 'top-source';
@@ -216,6 +215,8 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                     } else if (diff < 0) {
                         sourceHandle = 'bottom-source';
                         targetHandle = 'bottom-target';
+                    } else {
+                        edgeType = 'default';
                     }
 
                     newEdges.push({
@@ -228,20 +229,18 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                         markerEnd: { type: MarkerType.ArrowClosed, color: '#ffffff' },
                         style: { stroke: '#ffffff', strokeWidth: 2 },
                         labelStyle: { fill: '#ffffff', fontWeight: 800, fontSize: 16, stroke: '#0f172a', strokeWidth: 4, paintOrder: 'stroke' },
-                        type: 'default',
+                        type: edgeType,
                     });
                 });
             });
         }
 
-        // Highlight active states (handled inside StateNode via 'selected' prop if we pass it, or we can update data)
-        // Actually, React Flow passes 'selected' if we select it. But we want programmatic highlighting.
-        // We should update the 'data' of the nodes to include 'isActive'.
+        // Highlight active states
         newNodes = newNodes.map(node => {
             if (node.id === 'start-indicator') return node;
             return {
                 ...node,
-                selected: activeStates.includes(node.id), // Use selected prop for highlighting
+                selected: activeStates.includes(node.id),
             };
         });
 
@@ -256,6 +255,7 @@ export function VisualizationPanel({ nfa, dfa, mode, activeStates }: Visualizati
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 fitView
