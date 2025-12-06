@@ -33,23 +33,78 @@ function createState(isAccepting: boolean = false): State {
     };
 }
 
+// Wrapper to ensure renumbering happens at the top level
 export function thompson(node: ASTNode): NFA {
+    const nfa = _thompson(node);
+    return renumberNFA(nfa);
+}
+
+function _thompson(node: ASTNode): NFA {
     switch (node.type) {
         case 'Literal':
         case 'Epsilon':
             return createBasicNFA(node.value || null);
         case 'Union':
             if (!node.left || !node.right) throw new Error("Union node missing children");
-            return createUnionNFA(thompson(node.left), thompson(node.right));
+            return createUnionNFA(_thompson(node.left), _thompson(node.right));
         case 'Concat':
             if (!node.left || !node.right) throw new Error("Concat node missing children");
-            return createConcatNFA(thompson(node.left), thompson(node.right));
+            return createConcatNFA(_thompson(node.left), _thompson(node.right));
         case 'Star':
             if (!node.left) throw new Error("Star node missing child");
-            return createStarNFA(thompson(node.left));
+            return createStarNFA(_thompson(node.left));
         default:
             throw new Error(`Unknown node type: ${node.type}`);
     }
+}
+
+export function renumberNFA(nfa: NFA): NFA {
+    const newIdMap = new Map<string, string>();
+    let counter = 0;
+    const queue: State[] = [nfa.start];
+    const visited = new Set<string>();
+
+    visited.add(nfa.start.id);
+    newIdMap.set(nfa.start.id, `s${counter++}`);
+
+    // BFS to assign IDs
+    let head = 0;
+    while (head < queue.length) {
+        const current = queue[head++];
+
+        // Sort transitions to ensure deterministic numbering
+        const sortedTransitions = [...current.transitions].sort((a, b) => {
+            if (a.symbol === b.symbol) return 0;
+            if (a.symbol === null) return 1;
+            if (b.symbol === null) return -1;
+            return (a.symbol || '').localeCompare(b.symbol || '');
+        });
+
+        for (const trans of sortedTransitions) {
+            if (!visited.has(trans.to.id)) {
+                visited.add(trans.to.id);
+                newIdMap.set(trans.to.id, `s${counter++}`);
+                queue.push(trans.to);
+            }
+        }
+    }
+
+    // Handle unreachable states
+    for (const state of nfa.states) {
+        if (!visited.has(state.id)) {
+            newIdMap.set(state.id, `s${counter++}`);
+        }
+    }
+
+    // Update IDs
+    nfa.states.forEach(state => {
+        state.id = newIdMap.get(state.id)!;
+        if (state.label && state.label.startsWith('s')) {
+            delete state.label;
+        }
+    });
+
+    return nfa;
 }
 
 function createBasicNFA(symbol: string | null): NFA {
