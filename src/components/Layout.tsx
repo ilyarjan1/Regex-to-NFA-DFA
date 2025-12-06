@@ -3,9 +3,11 @@ import { Menu, Search, Home, Calculator, Settings, Github, BookOpen } from 'luci
 
 interface LayoutProps {
     children: React.ReactNode;
+    activePage: string;
+    onNavigate: (page: string) => void;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, activePage, onNavigate }: LayoutProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (
@@ -38,10 +40,33 @@ export function Layout({ children }: LayoutProps) {
                 </div>
 
                 <nav className="flex-1 overflow-y-auto py-2">
-                    <SidebarItem icon={<Home size={20} />} label="Home" isOpen={isSidebarOpen} />
-                    <SidebarItem icon={<Calculator size={20} />} label="Regex to NFA/DFA" isOpen={isSidebarOpen} active />
-                    <SidebarItem icon={<BookOpen size={20} />} label="Documentation" isOpen={isSidebarOpen} />
-                    <SidebarItem icon={<Github size={20} />} label="Source Code" isOpen={isSidebarOpen} />
+                    <SidebarItem
+                        icon={<Home size={20} />}
+                        label="Home"
+                        isOpen={isSidebarOpen}
+                        active={activePage === 'home'}
+                        onClick={() => onNavigate('home')}
+                    />
+                    <SidebarItem
+                        icon={<Calculator size={20} />}
+                        label="Regex to NFA/DFA"
+                        isOpen={isSidebarOpen}
+                        active={activePage === 'converter'}
+                        onClick={() => onNavigate('converter')}
+                    />
+                    <SidebarItem
+                        icon={<BookOpen size={20} />}
+                        label="Documentation"
+                        isOpen={isSidebarOpen}
+                        active={activePage === 'docs'}
+                        onClick={() => onNavigate('docs')}
+                    />
+                    <SidebarItem
+                        icon={<Github size={20} />}
+                        label="Source Code"
+                        isOpen={isSidebarOpen}
+                        onClick={() => window.open('https://github.com/ilyarjan1/web-final', '_blank')}
+                    />
                 </nav>
 
                 <div className="p-4 border-t border-navy-700">
@@ -64,7 +89,6 @@ export function Layout({ children }: LayoutProps) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Placeholder for future header items */}
                     </div>
                 </header>
 
@@ -77,9 +101,12 @@ export function Layout({ children }: LayoutProps) {
     );
 }
 
-function SidebarItem({ icon, label, isOpen, active }: { icon: React.ReactNode, label: string, isOpen: boolean, active?: boolean }) {
+function SidebarItem({ icon, label, isOpen, active, onClick }: { icon: React.ReactNode, label: string, isOpen: boolean, active?: boolean, onClick?: () => void }) {
     return (
-        <div className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${active ? 'text-accent-500 border-r-2 border-accent-500 bg-navy-800/50' : 'text-gray-400 hover:text-white hover:bg-navy-800'}`}>
+        <div
+            onClick={onClick}
+            className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${active ? 'text-accent-500 border-r-2 border-accent-500 bg-navy-800/50' : 'text-gray-400 hover:text-white hover:bg-navy-800'}`}
+        >
             <div className="min-w-[20px]">{icon}</div>
             {isOpen && <span className="ml-3 text-sm font-medium whitespace-nowrap">{label}</span>}
         </div>
