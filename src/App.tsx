@@ -16,7 +16,7 @@ import type { DFA } from './lib/automata/dfa';
 
 
 function App() {
-  const [activePage, setActivePage] = useState('converter');
+  const [activePage, setActivePage] = useState('home');
   const [regex, setRegex] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [nfa, setNfa] = useState<NFA | null>(null);
@@ -102,8 +102,8 @@ function App() {
                     <button
                       onClick={() => setMode('NFA')}
                       className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${mode === 'NFA'
-                          ? 'bg-accent-600 text-white shadow-lg shadow-accent-900/50'
-                          : 'text-gray-400 hover:text-white hover:bg-navy-800'
+                        ? 'bg-accent-600 text-white shadow-lg shadow-accent-900/50'
+                        : 'text-gray-400 hover:text-white hover:bg-navy-800'
                         }`}
                     >
                       NFA
@@ -111,8 +111,8 @@ function App() {
                     <button
                       onClick={() => setMode('DFA')}
                       className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${mode === 'DFA'
-                          ? 'bg-secondary-500 text-white shadow-lg shadow-secondary-900/50'
-                          : 'text-gray-400 hover:text-white hover:bg-navy-800'
+                        ? 'bg-secondary-500 text-white shadow-lg shadow-secondary-900/50'
+                        : 'text-gray-400 hover:text-white hover:bg-navy-800'
                         }`}
                     >
                       DFA
