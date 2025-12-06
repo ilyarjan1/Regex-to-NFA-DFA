@@ -24,11 +24,11 @@ export class RegexParser {
         return result;
     }
 
-    // Expression -> Term { '|' Term }
+    // Expression -> Term { '|' Term } or { '+' Term }
     private parseExpression(): ASTNode {
         let left = this.parseTerm();
 
-        while (this.match('|')) {
+        while (this.match('|') || this.match('+')) {
             const right = this.parseTerm();
             left = { type: 'Union', left, right };
         }
@@ -41,7 +41,8 @@ export class RegexParser {
         let left = this.parseFactor();
 
         // While we have a valid start of a Factor, treat it as concatenation
-        while (this.pos < this.input.length && this.input[this.pos] !== '|' && this.input[this.pos] !== ')') {
+        // Stop at Union operators ('|', '+') or closing parenthesis
+        while (this.pos < this.input.length && !['|', '+', ')'].includes(this.input[this.pos])) {
             const right = this.parseFactor();
             left = { type: 'Concat', left, right };
         }
@@ -70,13 +71,10 @@ export class RegexParser {
             return node;
         }
 
-        // Check for explicit epsilon 'ε' or maybe just treat empty as epsilon?
-        // For now, let's assume 'ε' is a literal unless we define a special char.
-        // Actually, let's treat any non-special char as a literal.
-
         if (this.pos < this.input.length) {
             const char = this.input[this.pos];
-            if (['|', '*', ')'].includes(char)) {
+            // Disallow special characters from being literals
+            if (['|', '+', '*', ')'].includes(char)) {
                 throw new Error(`Unexpected character: ${char}`);
             }
             this.pos++;
