@@ -60,11 +60,11 @@ function App() {
       {activePage === 'docs' ? (
         <Documentation />
       ) : activePage === 'home' ? (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <h1 className="text-5xl font-bold text-white mb-6 tracking-tight">
+        <div className="flex flex-col items-center justify-center h-full text-center px-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
             Master <span className="text-accent-400">Automata Theory</span>
           </h1>
-          <p className="text-gray-400 max-w-2xl mb-10 text-lg leading-relaxed">
+          <p className="text-gray-400 max-w-2xl mb-10 text-base md:text-lg leading-relaxed">
             Visualize the magic of converting Regular Expressions into Nondeterministic and Deterministic Finite Automata. Interactive, educational, and easy to understand.
           </p>
           <button
@@ -75,7 +75,7 @@ function App() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto pr-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto pr-2 pb-20 md:pb-0">
           {/* Left Column: Input & Explanations */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <InputPanel
@@ -90,8 +90,8 @@ function App() {
 
           {/* Right Column: Visualization & Table */}
           <div className="lg:col-span-8 flex flex-col gap-6">
-            <div className="bg-navy-800 rounded-lg border border-navy-700 p-6 flex flex-col shadow-xl">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-navy-800 rounded-lg border border-navy-700 p-4 md:p-6 flex flex-col shadow-xl">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 md:gap-0">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                   <span className="w-2 h-8 bg-accent-500 rounded-full"></span>
                   Visualization Result
@@ -121,7 +121,7 @@ function App() {
                 )}
               </div>
 
-              <div className="flex-1 relative bg-navy-950 rounded-lg border border-navy-700 overflow-hidden min-h-[400px]">
+              <div className="flex-1 relative bg-navy-950 rounded-lg border border-navy-700 overflow-hidden min-h-[300px] md:min-h-[400px]">
                 <VisualizationPanel
                   nfa={nfa}
                   dfa={dfa}
@@ -131,11 +131,11 @@ function App() {
               </div>
 
               {nfa && (
-                <div className="mt-6 flex items-center gap-4 bg-navy-900/50 p-4 rounded-lg border border-navy-700">
+                <div className="mt-6 flex flex-col md:flex-row items-center gap-4 bg-navy-900/50 p-4 rounded-lg border border-navy-700">
                   <input
                     type="text"
-                    placeholder="Test string (e.g., abba)..."
-                    className="bg-navy-950 border border-navy-700 rounded-md px-4 py-2 text-white text-sm outline-none focus:border-accent-500 flex-1"
+                    placeholder="Test string..."
+                    className="w-full md:w-auto bg-navy-950 border border-navy-700 rounded-md px-4 py-2 text-white text-sm outline-none focus:border-accent-500 flex-1"
                     value={testInput}
                     onChange={(e) => {
                       setTestInput(e.target.value);
